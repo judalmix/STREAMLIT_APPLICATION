@@ -16,6 +16,7 @@ def load_csv(file):
 st.set_page_config(page_title= 'Zippers prediction')
 
 st.title("Kreband: Zippers prediction")
+
 st.write(' ')
 st.write(' ')
 

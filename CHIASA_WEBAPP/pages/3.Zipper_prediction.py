@@ -1,4 +1,5 @@
 #imports
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -6,6 +7,7 @@ import matplotlib.pyplot as plt
 from io import StringIO
 import pickle
 import numpy
+import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from xgboost.sklearn import XGBClassifier
@@ -77,10 +79,9 @@ def array_to_dataset(idx,num_cols,new_df):
 
 
 def zippers_model(new_df, multiclass_model, regression_model, X_test_regression_reduced,x_regression_reduced, relative_error_mean_reduced,nom_ultima_col):
-   
-    num = st.slider('Insert the ID of the zipper you would like to predict', 0, new_df.shape[0], new_df.shape[1],key='10000')
+    num = st.slider('Insert the ID of the zipper you would like to predict', min_value=0, max_value=new_df.shape[0],key='10000')
     st.write('The ID selected is ', num)
-    idx_inicial=int(num)
+    idx_inicial=np.int(num)
     aux=new_df.iloc[idx_inicial]
     aux1=aux.drop(['Quartils',nom_ultima_col])
     new_data=array_to_dataset(aux1,len(aux1),new_df)
@@ -166,6 +167,12 @@ if 'numero' in st.session_state:
     numero=st.session_state['numero']
 if 'data_processed' in st.session_state:
     dataframe=st.session_state['data_processed']
+if 'data_covid' in st.session_state: 
+    data_covid=st.session_state['data_covid']
+if 'data_covid_encoded' in st.session_state:
+    data_covid_encoded=st.session_state['data_covid_encoded']
+
+
 
 
 #starting plotting
@@ -178,6 +185,7 @@ st.write('2-Prediction for all the data. ')
 st.write('')
 st.write('')
 st.write('Here you can find the prediction and the explainability of the model. ')
+
 df=convert_to_string(dataframe)
 nom_ultima_col = df.columns[-1]
 new_df= df[(df[nom_ultima_col]>0)]
@@ -194,28 +202,63 @@ for i in range(len(new_df)):
         q.append(3)
 new_df['Quartils']=q
 
-
 model_regression,X_test_regression_reduced,x_regression_reduced,Y_test_regression_reduced, relative_error_mean_reduced=apply_regression(new_df,nom_ultima_col)
-
 model_xgboost,X_train2, X_test2, Y_train2, Y_test2,x2,y2=multiclass_classification(new_df,nom_ultima_col)
+
+#eliminant els mesos on el COVID va afectar
+df_covid=convert_to_string(data_covid_encoded)
+nom_ultima_col_covid = df_covid.columns[-1]
+new_df_covid= df_covid[(df_covid[nom_ultima_col_covid]>0)]
+quartils_covid= numpy.quantile(new_df_covid[nom_ultima_col_covid], [0.25,0.5,0.75,1])
+q_covid=[]
+for i in range(len(new_df_covid)):
+    if new_df_covid[nom_ultima_col_covid].iloc[i]<=quartils_covid[0]:
+        q_covid.append(0)
+    elif new_df_covid[nom_ultima_col_covid].iloc[i]>quartils_covid[0] and new_df_covid[nom_ultima_col_covid].iloc[i]<=quartils_covid[1]:
+        q_covid.append(1)
+    elif new_df_covid[nom_ultima_col_covid].iloc[i]>quartils_covid[1] and  new_df_covid[nom_ultima_col_covid].iloc[i]<=quartils_covid[2]:
+        q_covid.append(2)
+    else:
+        q_covid.append(3)
+new_df_covid['Quartils']=q_covid
+
+model_regression_covid,X_test_regression_reduced_covid,x_regression_reduced_covid,Y_test_regression_reduced_covid, relative_error_mean_reduced_covid=apply_regression(new_df_covid,nom_ultima_col_covid)
+model_xgboost_covid,X_train2_covid, X_test2_covid, Y_train2_covid, Y_test2_covid,x2_covid,y2_covid=multiclass_classification(new_df_covid,nom_ultima_col_covid)
 
 
 with st.expander("Prediction"):
-    tab1,tab2= st.tabs(["Prediction of a zipper already in the dataset", " Prediction Dataset for the next months"])
-    with tab1: 
-        st.write('You will do a prediction with a zipper already in the dataset!')
-        st.write('Here you can find the dataset:  ')
-        zippers_model(new_df, model_xgboost, model_regression, X_test_regression_reduced,x_regression_reduced, relative_error_mean_reduced,nom_ultima_col)
+    on = st.toggle('Take into account the COVID')
+    if on:
+        st.write('The COVID year (2020) will be deleted!')
+        tab1,tab2= st.tabs(["Prediction of a zipper already in the dataset", " Prediction Dataset for the next months"])
+        with tab1: 
+            st.write('You will do a prediction with a zipper already in the dataset!')
+            st.write('Here you can find the dataset:  ')
+            zippers_model(new_df_covid, model_xgboost_covid, model_regression_covid, X_test_regression_reduced_covid,x_regression_reduced_covid, relative_error_mean_reduced_covid,nom_ultima_col_covid)
 
-    with tab2: 
-        st.write('Prediction for the next months: ')
-        st.write('')
-        df_encoded,df_not_encoded=model(new_df,LinearRegression())
-        st.write('The prediction of the dataset ENCODED is: ')
-        st.write(df_encoded)
-        st.write('')
-        st.write('The prediction of the dataset NOT ENCODED is: ')
-        st.write(df_not_encoded)
+        with tab2: 
+            st.write('Prediction for the next months: ')
+            st.write('')
+            df_encoded_covid,df_not_encoded_covid=model(new_df_covid,LinearRegression())
+            st.write('')
+            st.write('The prediction of the dataset NOT ENCODED is: ')
+            st.write(df_not_encoded_covid)
+
+
+    else: 
+        tab1,tab2= st.tabs(["Prediction of a zipper already in the dataset", " Prediction Dataset for the next months"])
+        with tab1: 
+            st.write('You will do a prediction with a zipper already in the dataset!')
+            st.write('Here you can find the dataset:  ')
+            zippers_model(new_df, model_xgboost, model_regression, X_test_regression_reduced,x_regression_reduced, relative_error_mean_reduced,nom_ultima_col)
+
+        with tab2: 
+            st.write('Prediction for the next months: ')
+            st.write('')
+            df_encoded,df_not_encoded=model(new_df,LinearRegression())
+            st.write('')
+            st.write('The prediction of the dataset NOT ENCODED is: ')
+            st.write(df_not_encoded)
 
 shap_values_multiclass = shap.TreeExplainer(model_xgboost).shap_values(X_test2)
 #explainer = shap.Explainer(model_regression.predict, X_test_regression_reduced)
@@ -249,7 +292,7 @@ with st.expander("Explainable SHAP Plots"):
             st.write(' The x-axis represents the shap values and the y-axis represents the most relevant features for the ID selected from the test data of the output model.')
             st.write('We can also see the differnt values for each characteristic next to the feature name. The various values are from our test data with the ID picked. Those variables that will have a negative influence on the number of zippers sold with these features are noted in blue, while those that will raise the number of zippers sold are marked in red.')
             idx_shap_plot = st.slider('Choose an ID to see the individual SHAP Plot. ', 0, X_test_regression_reduced.shape[0], X_test_regression_reduced.shape[1],key='100000')
-            idx_shap_plot=int(idx_shap_plot)
+            idx_shap_plot=np.int(idx_shap_plot)
             st_shap(shap.plots.waterfall(shap_values_regressor[idx_shap_plot]))
             
 

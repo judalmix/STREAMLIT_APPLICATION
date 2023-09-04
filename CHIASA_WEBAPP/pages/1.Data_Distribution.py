@@ -32,10 +32,12 @@ def group_by_months(df,num):
         grouped_df=grouped_cols+remaining_cols
     dataset= pd.concat(grouped_df, axis=1, ignore_index=True)
     df_total=pd.concat([features_dataset,dataset],axis=1, ignore_index=True)
+ 
+    
 
     return df_total,num
 
-def rename_columns(df):
+def rename_columns(df,num):
     df['Familia']=df.iloc[:,0]
     df['Stopers']=df.iloc[:,1]
     df['Sliders']=df.iloc[:,2]
@@ -49,8 +51,82 @@ def rename_columns(df):
     for col_name in col_names:
         if col_name not in new_col_names:
             new_col_names.append(col_name)
-    df = df[new_col_names]       
-    return df
+    df = df[new_col_names] 
+
+    if num==1: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Mes'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)     
+    elif num==2: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada dos mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==3: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Trimestre'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==4: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Quadrimestre'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==5: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Quinquemestre'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==6: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Semestre'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==7: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada set mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==8: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada vuit mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==9: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada nou mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==10: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada deu mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    elif num==11: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Agrupació cada onze mesos'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+    else: 
+        new_cols = {}
+        for i, col in enumerate(df.columns[7:]):
+            new_col_name = f'{i+1}{"" if i%10==0 and i!=10 else ""} Any'
+            new_cols[col] = new_col_name 
+        df_encoded = df.rename(columns=new_cols)  
+
+    return df_encoded
 
 def encoding_data(df):
     values_dict = {}
@@ -96,11 +172,24 @@ has_finish=st.button('Sumbit number',key='19')
 df=dataset.dropna()
 df=df.drop(['Codi','Codi sense etiqueta','Descripció'], axis=1)
 df=df.drop('Total',axis=1)
+df_covid=df.copy()
+df_covid=df_covid.drop(['Quantitat: Gen/2020',
+       'Quantitat: Feb/2020', 'Quantitat: Mar/2020', 'Quantitat: Abr/2020',
+       'Quantitat: Mai/2020', 'Quantitat: Jun/2020', 'Quantitat: Jul/2020',
+       'Quantitat: Ago/2020', 'Quantitat: Set/2020', 'Quantitat: Oct/2020',
+       'Quantitat: Nov/2020', 'Quantitat: Des/2020'], axis=1)
 
+#sense tenir en compte les afectacions del COVID
 dataset_grouped,numero=group_by_months(df,num)
-dataset_grouped=rename_columns(dataset_grouped)
+dataset_grouped=rename_columns(dataset_grouped,num)
 df_not_encoded= dataset_grouped.copy()
 dataset_grouped,values_dict=encoding_data(dataset_grouped)
+
+#tenint en compte les afectacions del covid
+dataset_grouped_covid,numero_covid=group_by_months(df_covid, num)
+dataset_grouped_covid=rename_columns(dataset_grouped_covid,num)
+df_not_encoded_covid= dataset_grouped_covid.copy()
+dataset_grouped_covid,values_dict_covid=encoding_data(dataset_grouped_covid)
 
 if 'diccionari' not in st.session_state:
     st.session_state['diccionari']=values_dict
@@ -113,10 +202,13 @@ if 'function3' not in st.session_state:
 
 
 
+
+
 #button
 if has_finish:
     st.write('This is the dataset grouped by',num, 'months: ')
-    st.write(dataset_grouped)
+    st.write(df_not_encoded)
+    st.write('The data has: ', df_not_encoded.shape[0], 'columns and', df_not_encoded.shape[1],'rows.')
     st.write('Here we will see some graphics of the features.')
     with st.expander("See general plots of our dataset"):
         tab1,tab2,tab3, tab4, tab5,tab6,tab7= st.tabs(["Family Distribution", " Stopers Distribution", "Sliders Distribution","Teeth Distribution",'Color Distribution','Label Distribution','Llargada Distribution'])
@@ -205,3 +297,7 @@ if has_finish:
 
     if 'data_processed' not in st.session_state:
         st.session_state['data_processed']=dataset_grouped
+    if 'data_covid' not in st.session_state: 
+        st.session_state['data_covid']=df_not_encoded_covid
+    if 'data_covid_encoded' not in st.session_state:
+        st.session_state['data_covid_encoded']=dataset_grouped_covid
